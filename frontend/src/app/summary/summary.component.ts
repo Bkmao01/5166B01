@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import * as d3 from 'd3';
 
 @Component({
@@ -6,15 +6,11 @@ import * as d3 from 'd3';
   templateUrl: './summary.component.html',
   styleUrls: ['./summary.component.scss']
 })
-export class SummaryComponent implements OnInit, AfterViewInit {
+export class SummaryComponent implements OnInit {
 
   constructor() {}
 
   ngOnInit(): void {
-    // Fetch data or perform any necessary setup here
-  }
-
-  ngAfterViewInit(): void {
     this.createChart();
   }
 
@@ -27,43 +23,38 @@ export class SummaryComponent implements OnInit, AfterViewInit {
       { category: 'Health Professions', value: 17 }
     ];
 
-    const width = 600;
-    const height = 400;
-    const radius = Math.min(width, height) / 2;
+    const svg = d3.select('svg');
+    const margin = 50;
+    const width = +svg.attr('width') - margin * 2;
+    const height = +svg.attr('height') - margin * 2;
+    const chart = svg.append('g')
+      .attr('transform', `translate(${margin}, ${margin})`);
 
-    const svg = d3.select('svg')
-      .attr('width', width)
-      .attr('height', height)
-      .append('g')
-      .attr('transform', `translate(${width / 2}, ${height / 2})`);
-
-    const color = d3.scaleOrdinal()
+    const xScale = d3.scaleBand()
+      .range([0, width])
       .domain(data.map(d => d.category))
-      .range(d3.schemeCategory10);
+      .padding(0.4);
 
-    const pie = d3.pie<any>()
-      .value(d => d.value)
-      .sort(null);
+    const yScale = d3.scaleLinear()
+      .range([height, 0])
+      .domain([0, d3.max(data, d => d.value) ?? 0]); // Provide a default value of 0
 
-    const arc = d3.arc<any>()
-      .innerRadius(0)
-      .outerRadius(radius);
+    chart.append('g')
+      .attr('transform', `translate(0, ${height})`)
+      .call(d3.axisBottom(xScale));
 
-    const arcs = svg.selectAll('arc')
-      .data(pie(data))
+    chart.append('g')
+      .call(d3.axisLeft(yScale));
+
+    chart.selectAll('.bar')
+      .data(data)
       .enter()
-      .append('g')
-      .attr('class', 'arc');
-
-    arcs.append('path')
-      .attr('d', arc)
-      .attr('fill', d => color(d.data.category) as string);
-
-    arcs.append('text')
-      .attr('transform', d => `translate(${arc.centroid(d)})`)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '12px')
-      .attr('fill', '#fff')
-      .text(d => d.data.category);
+      .append('rect')
+      .attr('class', 'bar')
+      .attr('x', d => xScale(d.category) ?? 0)
+      .attr('y', d => yScale(d.value))
+      .attr('width', xScale.bandwidth())
+      .attr('height', d => height - yScale(d.value))
+      .attr('fill', '#ff5722');
   }
 }
